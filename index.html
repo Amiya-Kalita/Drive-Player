@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DrivePlayer - Play Google Drive Videos</title>
+    <style>
+        /* CSS Variables for consistent theming */
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --background-dark: #1a1a2e;
+            --background-light: #16213e;
+            --error-color: #e74c3c;
+            --success-color: #2ecc71;
+            --transition-speed: 0.3s;
+        }
+
+        /* CSS Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-dark);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        /* Header Styles */
+        header {
+            background-color: var(--secondary-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+
+        nav ul li {
+            margin-left: 1rem;
+        }
+
+        nav ul li a {
+            color: var(--text-color);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color var(--transition-speed);
+        }
+
+        nav ul li a:hover, nav ul li a.active {
+            background-color: var(--primary-color);
+        }
+
+        /* Main Content Styles */
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .input-section {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .input-section h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .input-section p {
+            color: #bdc3c7;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-container {
+            display: flex;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        #drive-link {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            font-size: 1rem;
+            border: 2px solid var(--background-light);
+            border-radius: 4px 0 0 4px;
+            background-color: var(--background-light);
+            color: var(--text-color);
+            outline: none;
+            transition: border-color var(--transition-speed);
+        }
+
+        #drive-link:focus {
+            border-color: var(--primary-color);
+        }
+
+        #load-video {
+            padding: 0.8rem 1.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color var(--transition-speed);
+        }
+
+        #load-video:hover {
+            background-color: #2980b9;
+        }
+
+        .error-message {
+            color: var(--error-color);
+            margin-top: 1rem;
+            min-height: 24px;
+        }
+
+        /* Video Container Styles */
+        .video-container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--background-light);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .player-placeholder {
+            height: 0;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--background-light);
+        }
+
+        .player-placeholder svg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .player-placeholder p {
+            margin-top: 100px;
+            color: #bdc3c7;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, 20px);
+            width: 100%;
+            text-align: center;
+        }
+
+        .video-frame {
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            position: relative;
+        }
+
+        .video-frame iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Loading Indicator */
+        .loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .loading div {
+            width: 20px;
+            height: 20px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 5px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .loading div:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .loading div:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+        /* Success Message */
+        .success-message {
+            color: var(--success-color);
+            margin-top: 1rem;
+            display: none;
+        }
+
+        /* Footer Styles */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            background-color: var(--secondary-color);
+            margin-top: 3rem;
+        }
+
+        footer p {
+            color: #bdc3c7;
+            margin: 0.5rem 0;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                padding: 1rem;
+            }
+            
+            .logo {
+                margin-bottom: 1rem;
+            }
+            
+            .input-container {
+                flex-direction: column;
+            }
+            
+            #drive-link {
+                border-radius: 4px 4px 0 0;
+            }
+            
+            #load-video {
+                border-radius: 0 0 4px 4px;
+            }
+            
+            .input-section h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            main {
+                padding: 0 1rem;
+            }
+            
+            .input-section h1 {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header with logo and navigation -->
+    <header>
+        <div class="logo">DrivePlayer</div>
+        <nav>
+            <ul>
+                <li><a href="#" class="active">Home</a></li>
+                <li><a href="#help" id="help-link">Help</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <!-- Main content area -->
+    <main>
+        <!-- Input section with title and link input -->
+        <section class="input-section">
+            <h1>Play Your Google Drive Videos</h1>
+            <p>Paste your Google Drive shared video link below to start watching.</p>
+            
+            <div class="input-container">
+                <input type="text" id="drive-link" 
+                       placeholder="Paste Google Drive video link here..." 
+                       aria-label="Google Drive video link">
+                <button id="load-video" aria-label="Play video">Play Video</button>
+            </div>
+            
+            <div class="error-message" id="error-display" aria-live="assertive"></div>
+            <div class="success-message" id="success-display" aria-live="polite"></div>
+        </section>
+        
+        <!-- Video player container -->
+        <section class="video-container" id="video-container">
+            <div class="player-placeholder" id="player-placeholder">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+                    <path d="M15.5 12L10 15.5V8.5L15.5 12Z" fill="rgba(255,255,255,0.5)"/>
+                </svg>
+                <p>Your video will appear here</p>
+            </div>
+            <!-- Video player will be inserted here via JavaScript -->
+        </section>
+        
+        <!-- Instructions section (hidden by default, shown when clicking Help) -->
+        <section id="help-section" style="display: none; margin-top: 3rem; background-color: var(--background-light); padding: 2rem; border-radius: 8px;">
+            <h2 style="margin-bottom: 1rem;">How to Use DrivePlayer</h2>
+            <ol style="margin-left: 2rem;">
+                <li style="margin-bottom: 1rem;">
+                    <strong>Get a Google Drive video link:</strong> Right-click on your video in Google Drive and select "Share". Then click "Copy link".
+                </li>
+                <li style="margin-bottom: 1rem;">
+                    <strong>Paste the link:</strong> Paste the copied link into the input field above.
+                </li>
+                <li style="margin-bottom: 1rem;">
+                    <strong>Play the video:</strong> Click the "Play Video" button or press Enter.
+                </li>
+            </ol>
+            <p><strong>Note:</strong> The video must have sharing permissions set to "Anyone with the link can view".</p>
+            <button id="close-help" style="margin-top: 1rem; padding: 0.5rem 1rem; background-color: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">Close Help</button>
+        </section>
+    </main>
+    
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2023 DrivePlayer. All rights reserved.</p>
+        <p>A simple way to watch Google Drive videos.</p>
+    </footer>
+
+    <script>
+        /**
+         * DrivePlayer - A simple Google Drive video player
+         * This script handles the processing of Google Drive links and embedding videos
+         */
+        
+        // DOM Elements - Get references to DOM elements we'll need to manipulate
+        const driveLinkInput = document.getElementById('drive-link');
+        const loadVideoButton = document.getElementById('load-video');
+        const videoContainer = document.getElementById('video-container');
+        const errorDisplay = document.getElementById('error-display');
+        const successDisplay = document.getElementById('success-display');
+        const playerPlaceholder = document.getElementById('player-placeholder');
+        const helpLink = document.getElementById('help-link');
+        const helpSection = document.getElementById('help-section');
+        const closeHelpButton = document.getElementById('close-help');
+        
+        // Event Listeners - Set up user interaction events
+        loadVideoButton.addEventListener('click', processVideoLink);
+        driveLinkInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                processVideoLink();
+            }
+        });
+        
+        helpLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            helpSection.style.display = 'block';
+        });
+        
+        closeHelpButton.addEventListener('click', function() {
+            helpSection.style.display = 'none';
+        });
+        
+        /**
+         * Main function to process the video link
+         * Handles validation, extraction, and embedding
+         */
+        function processVideoLink() {
+            // Clear previous messages
+            errorDisplay.textContent = '';
+            successDisplay.style.display = 'none';
+            
+            // Get the input value
+            const driveLink = driveLinkInput.value.trim();
+            
+            // Check if input is empty
+            if (!driveLink) {
+                showError('Please enter a Google Drive video link.');
+                return;
+            }
+            
+            // Check if it's a valid Google Drive link
+            if (!isValidDriveLink(driveLink)) {
+                showError('This doesn\'t appear to be a valid Google Drive link.');
+                return;
+            }
+            
+            // Extract the file ID from the link
+            const fileId = extractFileId(driveLink);
+            if (!fileId) {
+                showError('Could not extract the file ID from the link. Please check the URL and try again.');
+                return;
+            }
+            
+            // Create the embed URL
+            const embedUrl = createEmbedUrl(fileId);
+            
+            // Show loading indicator
+            showLoading();
+            
+            // Create and load the video iframe
+            loadVideo(embedUrl);
+            
+            // Update URL for sharing
+            updateShareUrl(fileId);
+        }
+        
+        /**
+         * Validate if the link is from Google Drive
+         * @param {string} url - The URL to validate
+         * @return {boolean} - True if valid Google Drive link
+         */
+        function isValidDriveLink(url) {
+            return url.includes('drive.google.com');
+        }
+        
+        /**
+         * Extract the file ID from various formats of Google Drive links
+         * @param {string} url - The Google Drive URL
+         * @return {string|null} - The file ID or null if not found
+         */
+        function extractFileId(url) {
+            // Handle different Google Drive URL formats
+            
+            // Format: /file/d/FILE_ID/view
+            let fileIdMatch = url.match(/\/file\/d\/([^\/]+)/);
+            if (fileIdMatch && fileIdMatch[1]) {
+                return fileIdMatch[1];
+            }
+            
+            // Format: id=FILE_ID
+            fileIdMatch = url.match(/id=([^&]+)/);
+            if (fileIdMatch && fileIdMatch[1]) {
+                return fileIdMatch[1];
+            }
+            
+            // Format: /open?id=FILE_ID
+            fileIdMatch = url.match(/open\?id=([^&]+)/);
+            if (fileIdMatch && fileIdMatch[1]) {
+                return fileIdMatch[1];
+            }
+            
+            // If no match found
+            return null;
+        }
+        
+        /**
+         * Create the embed URL for the video
+         * @param {string} fileId - The Google Drive file ID
+         * @return {string} - The embed URL
+         */
+        function createEmbedUrl(fileId) {
+            return `https://drive.google.com/file/d/${fileId}/preview`;
+        }
+        
+        /**
+         * Load the video in an iframe
+         * @param {string} embedUrl - The URL to embed
+         */
+        function loadVideo(embedUrl) {
+            // Remove placeholder if it exists
+            if (playerPlaceholder) {
+                playerPlaceholder.style.display = 'none';
+            }
+            
+            // Check if video frame already exists
+            let videoFrame = videoContainer.querySelector('.video-frame');
+            
+            if (!videoFrame) {
+                // Create the video frame container if it doesn't exist
+                videoFrame = document.createElement('div');
+                videoFrame.className = 'video-frame';
+                videoContainer.appendChild(videoFrame);
+            }
+            
+            // Create the iframe element
+            const iframe = document.createElement('iframe');
+            iframe.src = embedUrl;
+            iframe.allowFullscreen = true;
+            iframe.allow = 'autoplay; encrypted-media';
+            iframe.title = 'Google Drive Video Player';
+            
+            // Add event listener for iframe load
+            iframe.addEventListener('load', function() {
+                hideLoading();
+                showSuccess('Video loaded successfully!');
+            });
+            
+            // Add error handling
+            iframe.addEventListener('error', () => {
+                hideLoading();
+                showError('Error loading the video. Please check the link and try again.');
+            });
+            
+            // Clear the video frame and add the new iframe
+            videoFrame.innerHTML = '';
+            videoFrame.appendChild(iframe);
+        }
+        
+        /**
+         * Show error message
+         * @param {string} message - The error message to display
+         */
+        function showError(message) {
+            errorDisplay.textContent = message;
+            errorDisplay.style.display = 'block';
+            hideLoading();
+        }
+        
+        /**
+         * Show success message
+         * @param {string} message - The success message to display
+         */
+        function showSuccess(message) {
+            successDisplay.textContent = message;
+            successDisplay.style.display = 'block';
+            
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+                successDisplay.style.display = 'none';
+            }, 3000);
+        }
+        
+        /**
+         * Show loading indicator
+         */
+        function showLoading() {
+            // Create loading indicator if it doesn't exist
+            let loading = videoContainer.querySelector('.loading');
+            if (!loading) {
+                loading = document.createElement('div');
+                loading.className = 'loading';
+                loading.innerHTML = '<div></div><div></div><div></div>';
+                loading.setAttribute('aria-label', 'Loading video');
+                loading.setAttribute('role', 'status');
+                videoContainer.appendChild(loading);
+            }
+            loading.style.display = 'block';
+        }
+        
+        /**
+         * Hide loading indicator
+         */
+        function hideLoading() {
+            const loading = videoContainer.querySelector('.loading');
+            if (loading) {
+                loading.style.display = 'none';
+            }
+        }
+        
+        /**
+         * Update the URL for easy sharing
+         * @param {string} fileId - The Google Drive file ID
+         */
+        function updateShareUrl(fileId) {
+            // Update URL without reloading the page
+            const url = new URL(window.location.href);
+            url.searchParams.set('video', fileId);
+            window.history.replaceState({}, '', url.toString());
+        }
+        
+        /**
+         * Initialize the app
+         * Set up initial state and check for URL parameters
+         */
+        function initApp() {
+            // Focus on input field when page loads
+            driveLinkInput.focus();
+            
+            // Check for URL parameters (for shared links)
+            const urlParams = new URLSearchParams(window.location.search);
+            const videoId = urlParams.get('video');
+            
+            if (videoId) {
+                driveLinkInput.value = `https://drive.google.com/file/d/${videoId}/view`;
+                processVideoLink();
+            }
+        }
+        
+        // Initialize when DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
